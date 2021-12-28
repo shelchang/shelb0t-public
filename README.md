@@ -6,9 +6,9 @@ pip install -U discord.py
 pip install asyncio  
 pip install numpy pandas  
 
-![shelb0t](shelb0t-avatar.jpg?raw=true "shelb0t")
-
 # Setting up the bot for your team/server
 Set up roster.txt with the steamID64's of each team member (17 digit ID number), one per line. The bot will get logs/demos from the last 24 hours in which 4 or more team members show up, which allows for up to 2 ringers/subs.
 
 Also set up the bot token and channel IDs for your bot/server on lines 27 and 30.
+
+![shelb0t](shelb0t-avatar.jpg?raw=true "shelb0t")
