@@ -29,6 +29,8 @@ botToken = os.environ['botToken']
 # Set up the channel ID for the channel you want to post logs in
 logChannelId = 852031278803058688
 
+# The bot automatically checks for logs once a day. You can change the hour when this happens by changing the string below
+# (based on 24 hour clock in your local time zone, set to a number 0-23)
 logPostTime = '20'
 
 def getLogs(numHours):
