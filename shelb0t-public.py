@@ -1,7 +1,7 @@
 # If running on a new setup, install these using
 #  pip install -U discord.py
 #  pip install asyncio
-#  pip install numpy pandas
+#  pip install numpy
 
 # Set up roster.txt with the steamID64's of each team member (17 digit ID number), one per line. The bot will get logs/demos from the last 24 hours in which 4 or more team members show up, which allows for up to 2 ringers/subs.
 # Also set up the bot token and channel IDs for your bot/server on lines 27 and 30
@@ -14,14 +14,10 @@ from discord.ext import commands
 import asyncio
 
 import os
-import random
 
 from datetime import date, datetime, timedelta
-import urllib.request, json, re
-import pandas as pd
+import urllib.request, json
 import numpy as np
-
-import urllib.parse
 
 # Set up bot token for your Discord bot
 botToken = os.environ['botToken']
