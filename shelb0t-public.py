@@ -3,146 +3,153 @@
 #  pip install asyncio
 #  pip install numpy
 
-# Set up roster.txt with the steamID64's of each team member (17 digit ID number), one per line. The bot will get logs/demos from the last 24 hours in which 4 or more team members show up, which allows for up to 2 ringers/subs.
-# Also set up the bot token and channel IDs for your bot/server on lines 27 and 30
+# Set up a file called roster.txt with the steamID64's of each team member (17 digit ID number), one per line.
+# The bot will get logs/demos from the last 24 hours in which 4 or more team members show up, which allows for up to 2 ringers/subs.
+# Also set up the bot token and channel IDs for your bot/server on lines 22 and 25
 
 from __future__ import print_function
 
 import discord
-from discord.ext import commands
+from discord.ext import tasks, commands
 
 import asyncio
-
-import os
 
 from datetime import date, datetime, timedelta
 import urllib.request, json
 import numpy as np
 
 # Set up bot token for your Discord bot
-botToken = os.environ['botToken']
+botToken = '[put bot token here]'
 
 # Set up the channel ID for the channel you want to post logs in
 logChannelId = 852031278803058688
 
-# The bot automatically checks for logs once a day. You can change the hour when this happens by changing the string below
-# (based on 24 hour clock in your local time zone, set to a number 0-23)
-logPostTime = '20'
+# The bot automatically checks for logs once a day. You can schedule when this happens by changing the string below
+# (based on 24 hour clock in your local time zone)
+logPostTime = '20:30'
 
-def getLogs(numHours):
-	listFile = open('roster.txt','r')
-	idList = np.array([])
-	logMsg = ''
+# You can set a custom prefix for commands here
+bot = commands.Bot(command_prefix="!")
 
-	cutoffTime = date.today() - timedelta(hours=numHours)
-	cutoffTime = cutoffTime.strftime('%s')
+class Logs(commands.Cog):
+	# for posting logs and demos
 
-	for eachline in listFile:
-		playerLogUrl = 'https://logs.tf/api/v1/log?player=' + eachline.strip('\n') + '&limit=15'
-		url = urllib.request.urlopen(playerLogUrl)
-		obj = json.load(url)
-		logsList = obj['logs']
+	def __init__(self, bot: commands.Bot):
+		self.bot = bot
+		self.auto_logs.start()
 
-		for i in logsList:
-			if i['players'] >= 12 and i['date'] > int(cutoffTime):
-				logid = str(i['id']) + '-' + i['map']
-				idList = np.append(idList, logid)
+	def getLogs(self, numHours):
+		listFile = open('roster.txt','r')
+		idList = np.array([])
+		logMsg = ''
 
-	for id in idList:
-		if np.count_nonzero(idList == id) < 4:
-			idList = idList[idList != id]
+		cutoffTime = date.today() - timedelta(hours=numHours)
+		cutoffTime = cutoffTime.strftime('%s')
 
-	idList = np.unique(idList)
-	idList[::-1].sort()
+		for eachline in listFile:
+			playerLogUrl = 'https://logs.tf/api/v1/log?player=' + eachline.strip('\n') + '&limit=15'
+			url = urllib.request.urlopen(playerLogUrl)
+			obj = json.load(url)
+			logsList = obj['logs']
 
-	for item in idList:
-		logid = item.split('-')[0]
-		logMap = item.split('-')[1]
-		logUrl = logMap + ' - https://logs.tf/' + logid
-		logMsg = logMsg + '\n' + logUrl
+			for i in logsList:
+				if i['players'] >= 12 and i['date'] > int(cutoffTime):
+					logid = str(i['id']) + '-' + i['map']
+					idList = np.append(idList, logid)
 
-	return logMsg
+		for id in idList:
+			if np.count_nonzero(idList == id) < 4:
+				idList = idList[idList != id]
 
-def getDemos(numHours):
-	listFile = open('roster.txt','r')
-	idList = np.array([])
-	logMsg = ''
+		idList = np.unique(idList)
+		idList[::-1].sort()
 
-	cutoffTime = date.today() - timedelta(hours=numHours)
-	cutoffTime = cutoffTime.strftime('%s')
+		for item in idList:
+			logid = item.split('-')[0]
+			logMap = item.split('-')[1]
+			logUrl = logMap + ' - https://logs.tf/' + logid
+			logMsg = logMsg + '\n' + logUrl
 
-	for eachline in listFile:
-		playerLogUrl = 'https://api.demos.tf/profiles/' + eachline.strip('\n') + '?after=' + str(int(cutoffTime))
-		url = urllib.request.urlopen(playerLogUrl)
-		obj = json.load(url)
+		return logMsg
 
-		for i in obj:
-			if i['playerCount'] >= 12:
-				logid = str(i['id']) + '-' + i['map']
-				idList = np.append(idList, logid)
+	def getDemos(self, numHours):
+		listFile = open('roster.txt','r')
+		idList = np.array([])
+		logMsg = ''
 
-	for id in idList:
-		if np.count_nonzero(idList == id) < 4:
-			idList = idList[idList != id]
+		cutoffTime = date.today() - timedelta(hours=numHours)
+		cutoffTime = cutoffTime.strftime('%s')
 
-	idList = np.unique(idList)
-	idList[::-1].sort()
+		for eachline in listFile:
+			playerLogUrl = 'https://api.demos.tf/profiles/' + eachline.strip('\n') + '?after=' + str(int(cutoffTime))
+			url = urllib.request.urlopen(playerLogUrl)
+			obj = json.load(url)
 
-	for item in idList:
-		logid = item.split('-')[0]
-		logMap = item.split('-')[1]
-		logUrl = logMap + ' - https://demos.tf/' + logid
-		logMsg = logMsg + '\n' + logUrl
+			for i in obj:
+				if i['playerCount'] >= 12:
+					logid = str(i['id']) + '-' + i['map']
+					idList = np.append(idList, logid)
 
-	return logMsg
+		for id in idList:
+			if np.count_nonzero(idList == id) < 4:
+				idList = idList[idList != id]
 
-bot = commands.Bot(command_prefix='!')
+		idList = np.unique(idList)
+		idList[::-1].sort()
 
-# !log
-@bot.command(help = 'Gets most recent team logs from logs.tf')
-async def log(ctx):
-	msg = getLogs(24)
-	channel = bot.get_channel(logChannelId) # Channel to post logs in
-	if msg:
-		msg = '**Most recent logs**:' + msg
-		await channel.send(msg)
-	else:
-		await ctx.send('No recent team logs found')
+		for item in idList:
+			logid = item.split('-')[0]
+			logMap = item.split('-')[1]
+			logUrl = logMap + ' - https://demos.tf/' + logid
+			logMsg = logMsg + '\n' + logUrl
 
-# !demo
-@bot.command(help = 'Gets most recent team demos from demos.tf')
-async def demo(ctx):
-	msg = getDemos(24)
-	channel = bot.get_channel(logChannelId) # Channel to post logs in
-	if msg:
-		msg = '**Most recent demos**:' + msg
-		await channel.send(msg)
-	else:
-		await ctx.send('No recent team demos found')
+		return logMsg
+
+	@commands.command(name='log', help='Gets most recent team logs from logs.tf')
+	async def log(self, ctx: commands.Context):
+		msg = self.getLogs(24)
+		channel = self.bot.get_channel(logChannelId) # Channel to post logs in
+		if msg:
+			msg = '**Most recent logs**:' + msg
+			await channel.send(msg)
+		else:
+			await ctx.send('No recent team logs found')
+
+	@commands.command(name='demo', help='Gets most recent team demos from demos.tf')
+	async def demo(self, ctx: commands.Context):
+		msg = self.getDemos(24)
+		channel = self.bot.get_channel(logChannelId) # Channel to post logs in
+		if msg:
+			msg = '**Most recent demos**:' + msg
+			await channel.send(msg)
+		else:
+			await ctx.send('No recent team demos found')
+
+	@tasks.loop(minutes=1440)
+	async def auto_logs(self):
+		now = datetime.strftime(datetime.now(), '%H:%M')
+		postTime = datetime.strptime(logPostTime, '%H:%M')
+		waitTime = (postTime - datetime.strptime(now, '%H:%M')).seconds
+		await asyncio.sleep(waitTime)
+
+		channel = self.bot.get_channel(logChannelId) # Channel to post logs in
+		msg1 = self.getLogs(12)
+		if msg1:
+			msg1 = '**Most recent logs**:' + msg1
+			await channel.send(msg1)
+		msg2 = self.getDemos(12)
+		if msg2:
+			msg2 = '**Most recent demos**:' + msg2
+			await channel.send(msg2)
+
+	@auto_logs.before_loop
+	async def before_auto_logs(self):
+		await self.bot.wait_until_ready()
+
+bot.add_cog(Logs(bot))
 
 @bot.event
 async def on_ready():
 	print(f'Logged in as {bot.user}')
-
-# Post scheduler
-async def time_check():
-	await bot.wait_until_ready()
-	while True:
-		now = datetime.strftime(datetime.now(), '%H')
-		if now == logPostTime:
-			channel = bot.get_channel(logChannelId) # Channel to post logs in
-			msg1 = getLogs(24)
-			if msg1:
-				msg1 = '**Most recent logs**:' + msg1
-				await channel.send(msg1)
-			msg2 = getDemos(24)
-			if msg2:
-				msg2 = '**Most recent demos**:' + msg2
-				await asyncio.sleep(5)
-				await channel.send(msg2)
-			await asyncio.sleep(3600)
-		await asyncio.sleep(1800)
-
-bot.loop.create_task(time_check())
 
 bot.run(botToken)

@@ -7,8 +7,9 @@ pip install asyncio
 pip install numpy  
 
 # Setting up the bot for your team/server
-Set up roster.txt with the steamID64's of each team member (17 digit ID number), one per line. The bot will get logs/demos from the last 24 hours in which 4 or more team members show up, which allows for up to 2 ringers/subs.
+Set up the bot token and channel IDs for your bot/server on lines 22 and 25
 
-Also set up the bot token and channel IDs for your bot/server on lines 23 and 26.
+Before running, set up a file called roster.txt with the steamID64's of each team member (17 digit ID number), one per line.
+The bot will get logs/demos from the last 24 hours in which 4 or more team members show up, which allows for up to 2 ringers/subs.
 
 ![shelb0t](shelb0t-avatar.jpg?raw=true "shelb0t")
